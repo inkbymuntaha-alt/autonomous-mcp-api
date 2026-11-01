@@ -31,6 +31,16 @@ def build_402_challenge():
         }
     )
 
+# --- ADD THIS ROOT ROUTE TO FIX 404 LOGS ---
+@app.get("/")
+def read_root():
+    return {
+        "status": "online",
+        "service": "autonomous-mcp-api",
+        "manifest": "/mcp/manifest",
+        "health": "OK"
+    }
+
 @app.get("/mcp/manifest")
 async def mcp_manifest():
     """MCP Discovery Manifest for external AI agents."""
