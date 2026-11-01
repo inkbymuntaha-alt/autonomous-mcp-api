@@ -32,7 +32,6 @@ def get_manifest():
 async def extract_commercial_leads(request: Request, response: Response):
     payment_header = request.headers.get("PAYMENT-SIGNATURE")
     
-    # Check for x402 settlement hash
     if not payment_header:
         response.status_code = status.HTTP_402_PAYMENT_REQUIRED
         return {
@@ -47,7 +46,6 @@ async def extract_commercial_leads(request: Request, response: Response):
             }
         }
 
-    # Data payload unlocked upon payment verification
     return {
         "status": "success",
         "verified_payment_tx": payment_header,
