@@ -1,0 +1,32 @@
+{
+  "$schema": "https://modelcontextprotocol.io/schemas/v1/manifest.json",
+  "name": "autonomous-commercial-leads",
+  "description": "High-intent B2B commercial data micro-asset gated by Base Mainnet USDC (x402 protocol).",
+  "version": "1.0.0",
+  "homepage": "https://autonomous-mcp-api.vercel.app",
+  "endpoint": "https://autonomous-mcp-api.vercel.app/mcp/tools/extract_commercial_leads",
+  "manifest_url": "https://autonomous-mcp-api.vercel.app/mcp/manifest",
+  "x402_gated": true,
+  "payment": {
+    "network": "eip155:8453",
+    "asset": "USDC",
+    "contract": "0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913",
+    "recipient": "0x960E510E4E1dA4B13CE3b601202d4680AFcf02E0",
+    "price_per_call": "0.002"
+  },
+  "capabilities": {
+    "tools": [
+      {
+        "name": "extract_commercial_leads",
+        "description": "Extract active B2B commercial lead targets with verified intent signals.",
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "target_region": { "type": "string", "default": "Global" },
+            "min_urgency_score": { "type": "number", "default": 0.5 }
+          }
+        }
+      }
+    ]
+  }
+}
