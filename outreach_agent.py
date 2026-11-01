@@ -10,7 +10,7 @@ RESEND_API_URL = "https://api.resend.com/emails"
 
 RESEND_API_KEY = os.getenv("RESEND_API_KEY")
 
-print(f"[*] Autonomous pipeline executing...")
+print("[*] Autonomous pipeline executing...")
 print(f"[*] RESEND_API_KEY detected: {bool(RESEND_API_KEY)}")
 
 def send_email_via_resend(to_email: str, subject: str, html_body: str):
