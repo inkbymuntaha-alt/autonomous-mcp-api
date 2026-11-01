@@ -1,65 +1,86 @@
 import os
-import smtplib
 import requests
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 from typing import Dict, List
 
-API_URL = "https://autonomous-mcp-api.vercel.app/mcp/tools/extract_commercial_leads"
+# API Endpoints
+MCP_API_URL = "https://autonomous-mcp-api.vercel.app/mcp/tools/extract_commercial_leads"
+RESEND_API_URL = "https://api.resend.com/emails"
 
-# Configuration for Automated Sending (Set these in your environment or replace placeholders)
-SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.gmail.com")
-SMTP_PORT = int(os.getenv("SMTP_PORT", 587))
-SENDER_EMAIL = os.getenv("SENDER_EMAIL", "your-email@gmail.com")
-SENDER_PASSWORD = os.getenv("SENDER_PASSWORD", "your-app-password")
+# Securely retrieve API Key from GitHub Secrets / Environment
+RESEND_API_KEY = os.getenv("RESEND_API_KEY")
 
 def fetch_commercial_leads(target_region: str, payment_sig: str = None) -> List[Dict]:
+    """Queries the x402-gated MCP endpoint for verified commercial leads."""
     headers = {"Content-Type": "application/json"}
     if payment_sig:
         headers["PAYMENT-SIGNATURE"] = payment_sig
         
     payload = {"target_region": target_region, "min_urgency_score": 0.5}
-    response = requests.post(API_URL, headers=headers, json=payload)
     
-    if response.status_code == 200:
-        return response.json().get("data", [])
-    return []
-
-def send_email_notification(to_email: str, subject: str, body: str):
-    """Automatically sends the generated cold email via SMTP relay."""
     try:
-        msg = MIMEMultipart()
-        msg["From"] = SENDER_EMAIL
-        msg["To"] = to_email
-        msg["Subject"] = subject
-        msg.attach(MIMEText(body, "plain"))
-
-        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
-        server.starttls()
-        server.login(SENDER_EMAIL, SENDER_PASSWORD)
-        server.sendmail(SENDER_EMAIL, to_email, msg.as_string())
-        server.quit()
-        print(f"[+] Autonomous email successfully dispatched to {to_email}")
+        response = requests.post(MCP_API_URL, headers=headers, json=payload, timeout=10)
+        if response.status_code == 200:
+            return response.json().get("data", [])
+        else:
+            print(f"[!] Server returned status {response.status_code}")
+            return []
     except Exception as e:
-        print(f"[X] SMTP Dispatch Error: {e}")
+        print(f"[X] Error fetching leads: {e}")
+        return []
+
+def send_email_via_resend(to_email: str, subject: str, html_body: str):
+    """Dispatches cold outreach emails using Resend REST API."""
+    if not RESEND_API_KEY:
+        print("[X] RESEND_API_KEY secret is missing from environment. Skipping email dispatch.")
+        return
+
+    headers = {
+        "Authorization": f"Bearer {RESEND_API_KEY}",
+        "Content-Type": "application/json"
+    }
+    
+    # Note: 'onboarding@resend.dev' sends to your verified account inbox
+    payload = {
+        "from": "onboarding@resend.dev",
+        "to": [to_email],
+        "subject": subject,
+        "html": html_body
+    }
+    
+    try:
+        response = requests.post(RESEND_API_URL, headers=headers, json=payload, timeout=10)
+        if response.status_code in [200, 201]:
+            print(f"[+] Resend Email sent successfully to {to_email}! ID: {response.json().get('id')}")
+        else:
+            print(f"[X] Resend API Error ({response.status_code}): {response.text}")
+    except Exception as e:
+        print(f"[X] Failed to dispatch via Resend: {e}")
 
 if __name__ == "__main__":
-    print("[*] Autonomous pipeline executing...")
+    print("[*] Initiating autonomous lead extraction & Resend email dispatch...")
     
-    # In production, pass your verified Base tx hash or integrate an automated eth-account signer here
+    # Using mock signature to pass testing check
     mock_tx_hash = "0x_mock_payment_proof"
     leads = fetch_commercial_leads(target_region="Mumbai", payment_sig=mock_tx_hash)
     
-    for lead in leads:
-        entity = lead.get("entity")
-        signal = lead.get("signal")
-        
-        subject = f"Scaling {entity}'s cross-border deal flow in Dubai"
-        body = f"""Hi Team at {entity},\n\nNoticed your recent market signal ({signal}) in Mumbai. We run an automated pipeline that extracts verified commercial property movers. Would you be open to a 5-minute data preview?\n\nBest,\nAutonomous Growth Operations"""
-        
-        # Target recipient destination (can be dynamically fetched or set to a test inbox)
-        target_inbox = "test-client@targetdomain.com"
-        
-        # Uncomment below to enable live automated sending once SMTP details are configured
-        # send_email_notification(target_inbox, subject, body)
-        print(f"[Simulated Dispatch] Ready to email {entity} regarding signal: {signal}")
+    destination_inbox = "inkbymuntaha@gmail.com"
+    
+    if not leads:
+        print("[*] Generating test dispatch directly to inbox...")
+        subject = "Autonomous Pipeline: Real-Time Commercial Signal Alert"
+        html_content = "<p>Congrats on sending your <strong>first automated email</strong> from your autonomous MCP agent!</p>"
+        send_email_via_resend(destination_inbox, subject, html_content)
+    else:
+        for lead in leads:
+            entity = lead.get("entity", "Target Company")
+            signal = lead.get("signal", "Market Expansion")
+            
+            subject = f"Scaling {entity}'s cross-border deal flow"
+            html_content = f"""
+            <h3>Commercial Lead Dispatch</h3>
+            <p>Hi Team at <strong>{entity}</strong>,</p>
+            <p>We detected your recent market signal (<em>{signal}</em>). Our autonomous system has generated a high-intent profile for your review.</p>
+            <p>Best regards,<br><strong>Autonomous Growth Operations</strong></p>
+            """
+            
+            send_email_via_resend(destination_inbox, subject, html_content)
