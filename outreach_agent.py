@@ -1,78 +1,65 @@
 import os
+import smtplib
 import requests
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from typing import Dict, List
 
 API_URL = "https://autonomous-mcp-api.vercel.app/mcp/tools/extract_commercial_leads"
 
+# Configuration for Automated Sending (Set these in your environment or replace placeholders)
+SMTP_SERVER = os.getenv("SMTP_SERVER", "smtp.gmail.com")
+SMTP_PORT = int(os.getenv("SMTP_PORT", 587))
+SENDER_EMAIL = os.getenv("SENDER_EMAIL", "your-email@gmail.com")
+SENDER_PASSWORD = os.getenv("SENDER_PASSWORD", "your-app-password")
+
 def fetch_commercial_leads(target_region: str, payment_sig: str = None) -> List[Dict]:
-    """Queries the x402-gated MCP endpoint for verified commercial leads."""
     headers = {"Content-Type": "application/json"}
     if payment_sig:
         headers["PAYMENT-SIGNATURE"] = payment_sig
         
-    payload = {
-        "target_region": target_region,
-        "min_urgency_score": 0.5
-    }
-    
+    payload = {"target_region": target_region, "min_urgency_score": 0.5}
     response = requests.post(API_URL, headers=headers, json=payload)
     
-    if response.status_code == 402:
-        print("[!] Payment Required (x402 Challenge Received):")
-        print(response.json())
-        return []
-    elif response.status_code == 200:
-        data = response.json()
-        return data.get("data", [])
-    else:
-        print(f"[X] Error {response.status_code}: {response.text}")
-        return []
+    if response.status_code == 200:
+        return response.json().get("data", [])
+    return []
 
-def generate_cold_email(lead: Dict) -> str:
-    """Generates a hyper-personalized cold outreach draft based on real-time signals."""
-    entity = lead.get("entity")
-    region = lead.get("region")
-    signal = lead.get("signal")
-    
-    if "Mumbai" in region:
-        # Template optimized for Dubai real estate / Mumbai cross-border expansion
-        return f"""Subject: Scaling {entity}'s cross-border deal flow in Dubai
-        
-Hi Team at {entity},
+def send_email_notification(to_email: str, subject: str, body: str):
+    """Automatically sends the generated cold email via SMTP relay."""
+    try:
+        msg = MIMEMultipart()
+        msg["From"] = SENDER_EMAIL
+        msg["To"] = to_email
+        msg["Subject"] = subject
+        msg.attach(MIMEText(body, "plain"))
 
-Noticed your recent market signal ({signal}) in {region}. With high-net-worth capital shifting aggressively between Mumbai and Dubai real estate corridors, traditional lead pipelines often miss immediate buyer intent.
-
-We run an automated pipeline that extracts verified commercial property movers before they hit public boards. Would you be open to a 5-minute data sample preview this week?
-
-Best regards,
-Autonomous Growth Operations
-"""
-    else:
-        # Template optimized for US Marketing Firms
-        return f"""Subject: Capturing intent for {entity}
-        
-Hi {entity} team,
-
-Noted your latest commercial milestone ({signal}). Scaling outbound acquisition in competitive US markets requires zero-latency prospect enrichment. 
-
-Our autonomous agents isolate high-intent accounts in real-time. Let me know if you'd like to test our verified data stream.
-
-Best,
-Growth Engineering
-"""
+        server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+        server.starttls()
+        server.login(SENDER_EMAIL, SENDER_PASSWORD)
+        server.sendmail(SENDER_EMAIL, to_email, msg.as_string())
+        server.quit()
+        print(f"[+] Autonomous email successfully dispatched to {to_email}")
+    except Exception as e:
+        print(f"[X] SMTP Dispatch Error: {e}")
 
 if __name__ == "__main__":
-    print("[*] Initiating autonomous lead extraction & outreach pipeline...")
+    print("[*] Autonomous pipeline executing...")
     
-    # Test with mock signature (or pass your real Base tx hash once funded)
+    # In production, pass your verified Base tx hash or integrate an automated eth-account signer here
     mock_tx_hash = "0x_mock_payment_proof"
-    
     leads = fetch_commercial_leads(target_region="Mumbai", payment_sig=mock_tx_hash)
     
-    if not leads:
-        print("[*] Tip: Provide a valid Base USDC transaction hash in 'payment_sig' to bypass the 402 paywall.")
-    else:
-        for lead in leads:
-            print(f"\n--- Generated Outreach for: {lead['entity']} ---")
-            email_draft = generate_cold_email(lead)
-            print(email_draft)
+    for lead in leads:
+        entity = lead.get("entity")
+        signal = lead.get("signal")
+        
+        subject = f"Scaling {entity}'s cross-border deal flow in Dubai"
+        body = f"""Hi Team at {entity},\n\nNoticed your recent market signal ({signal}) in Mumbai. We run an automated pipeline that extracts verified commercial property movers. Would you be open to a 5-minute data preview?\n\nBest,\nAutonomous Growth Operations"""
+        
+        # Target recipient destination (can be dynamically fetched or set to a test inbox)
+        target_inbox = "test-client@targetdomain.com"
+        
+        # Uncomment below to enable live automated sending once SMTP details are configured
+        # send_email_notification(target_inbox, subject, body)
+        print(f"[Simulated Dispatch] Ready to email {entity} regarding signal: {signal}")
