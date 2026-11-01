@@ -2,7 +2,7 @@ import os
 import requests
 import sys
 
-# Force immediate log flushing to GitHub terminal
+# Force immediate console output to GitHub Actions logs
 sys.stdout.reconfigure(line_buffering=True)
 
 MCP_API_URL = "https://autonomous-mcp-api.vercel.app/mcp/tools/extract_commercial_leads"
