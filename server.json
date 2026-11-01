@@ -1,0 +1,14 @@
+{
+  "$schema": "https://registry.modelcontextprotocol.io/v0/schema.json",
+  "name": "io.github.inkbymuntaha-alt/autonomous-mcp-api",
+  "version": "1.0.0",
+  "description": "High-intent commercial B2B data gated by x402 USDC micro-payments on Base Mainnet.",
+  "websiteUrl": "https://autonomous-mcp-api.vercel.app",
+  "repositoryUrl": "https://github.com/inkbymuntaha-alt/autonomous-mcp-api",
+  "remotes": [
+    {
+      "type": "sse",
+      "url": "https://autonomous-mcp-api.vercel.app/sse"
+    }
+  ]
+}
