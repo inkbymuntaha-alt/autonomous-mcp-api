@@ -7,7 +7,7 @@ on:
 
 jobs:
   run-outreach-and-discovery:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04  # Explicit runner OS to bypass image migration notices
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -20,12 +20,12 @@ jobs:
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install requests
+          pip install requests httpx resend
 
       - name: Run Pipeline Execution
         env:
           RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
         run: python outreach_agent.py
 
-      - name: Broadcast Manifest to Agent Registries
+      - name: Broadcast Manifest to Discovery Registries
         run: python register_discovery.py
