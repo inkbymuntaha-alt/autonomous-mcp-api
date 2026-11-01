@@ -23,4 +23,6 @@ jobs:
           pip install requests web3 pydantic fastapi uvicorn
 
       - name: Execute Autonomous Outreach Agent
+        env:
+          RESEND_API_KEY: ${{ secrets.RESEND_API_KEY }}
         run: python outreach_agent.py
